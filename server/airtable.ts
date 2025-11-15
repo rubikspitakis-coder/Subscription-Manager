@@ -1,13 +1,13 @@
 import Airtable from "airtable";
 import { differenceInDays } from "date-fns";
 import type { Subscription } from "@shared/schema";
-import bcrypt from "bcryptjs";
 
 const base = new Airtable({
   apiKey: process.env.AIRTABLE_API_KEY,
 }).base(process.env.AIRTABLE_BASE_ID!);
 
-const tableName = process.env.AIRTABLE_TABLE_NAME || "Subscriptions";
+// The table ID from the shared view URL
+const tableId = "tbl6UsW55HSaUeNDB";
 
 function getStatus(renewalDate: Date): Subscription["status"] {
   const daysUntil = differenceInDays(renewalDate, new Date());
@@ -18,38 +18,65 @@ function getStatus(renewalDate: Date): Subscription["status"] {
   return "active";
 }
 
-async function encryptPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+function parseDate(dateValue: any): Date | null {
+  if (!dateValue) return null;
+  try {
+    return new Date(dateValue);
+  } catch {
+    return null;
+  }
 }
 
 export async function getSubscriptions(): Promise<Subscription[]> {
-  const records = await base(tableName).select().all();
+  try {
+    const records = await base(tableId).select().all();
 
-  return records.map((record) => {
-    const renewalDate = new Date(record.get("Renewal Date") as string);
-    return {
-      id: record.id,
-      name: record.get("Name") as string,
-      cost: Number(record.get("Cost") || 0),
-      billingPeriod: (record.get("Billing Period") as "monthly" | "yearly") || "monthly",
-      renewalDate: renewalDate.toISOString(),
-      username: record.get("Username") as string | undefined,
-      password: record.get("Password") as string | undefined,
-      reminderDays: Number(record.get("Reminder Days") || 30),
-      status: getStatus(renewalDate),
-      category: record.get("Category") as string | undefined,
-      notes: record.get("Notes") as string | undefined,
-      lastLogin: record.get("Last Login") ? new Date(record.get("Last Login") as string).toISOString() : undefined,
-      paymentMethod: record.get("Payment Method") as string | undefined,
-    };
-  });
+    return records.map((record) => {
+      const fields = record.fields;
+      
+      // Parse renewal date
+      const renewalDateStr = fields["Renewal Date"] as string;
+      const renewalDate = renewalDateStr ? new Date(renewalDateStr) : new Date();
+      
+      // Parse cost - handle both number and string formats
+      let cost = 0;
+      const costField = fields["Cost"];
+      if (typeof costField === "number") {
+        cost = costField;
+      } else if (typeof costField === "string") {
+        const parsed = parseFloat(costField.replace(/[^0-9.]/g, ""));
+        cost = isNaN(parsed) ? 0 : parsed;
+      }
+
+      return {
+        id: record.id,
+        name: (fields["Name"] as string) || "Unnamed",
+        cost,
+        billingPeriod: (fields["Billing Period"] as "monthly" | "yearly") || "yearly",
+        renewalDate: renewalDate.toISOString(),
+        username: fields["Username"] as string | undefined,
+        password: fields["Password"] as string | undefined,
+        reminderDays: Number(fields["Reminder Days"] || 30),
+        status: getStatus(renewalDate),
+        category: fields["Category"] as string | undefined,
+        notes: fields["Description"] as string | undefined,
+        lastLogin: fields["Last Login"] 
+          ? new Date(fields["Last Login"] as string).toISOString() 
+          : undefined,
+        paymentMethod: fields["Payment Method"] as string | undefined,
+      };
+    });
+  } catch (error: any) {
+    console.error("Airtable error details:", error);
+    throw error;
+  }
 }
 
 export async function updateReminderDays(
   subscriptionId: string,
   reminderDays: number
 ): Promise<void> {
-  await base(tableName).update(subscriptionId, {
+  await base(tableId).update(subscriptionId, {
     "Reminder Days": reminderDays,
   });
 }
