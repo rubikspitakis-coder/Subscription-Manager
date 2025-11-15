@@ -2,12 +2,23 @@ import Airtable from "airtable";
 import { differenceInDays } from "date-fns";
 import type { Subscription } from "@shared/schema";
 
+// Extract base ID from URL if needed
+function extractBaseId(baseIdOrUrl: string): string {
+  if (baseIdOrUrl.startsWith("http")) {
+    const match = baseIdOrUrl.match(/app[a-zA-Z0-9]+/);
+    return match ? match[0] : baseIdOrUrl;
+  }
+  return baseIdOrUrl;
+}
+
+const baseId = extractBaseId(process.env.AIRTABLE_BASE_ID || "");
 const base = new Airtable({
   apiKey: process.env.AIRTABLE_API_KEY,
-}).base(process.env.AIRTABLE_BASE_ID!);
+}).base(baseId);
 
-// The table ID from the shared view URL
-const tableId = "tbl6UsW55HSaUeNDB";
+const tableName = process.env.AIRTABLE_TABLE_NAME || "AI Tools";
+
+console.log(`Airtable config - Base ID: ${baseId}, Table: ${tableName}`);
 
 function getStatus(renewalDate: Date): Subscription["status"] {
   const daysUntil = differenceInDays(renewalDate, new Date());
@@ -18,18 +29,11 @@ function getStatus(renewalDate: Date): Subscription["status"] {
   return "active";
 }
 
-function parseDate(dateValue: any): Date | null {
-  if (!dateValue) return null;
-  try {
-    return new Date(dateValue);
-  } catch {
-    return null;
-  }
-}
-
 export async function getSubscriptions(): Promise<Subscription[]> {
   try {
-    const records = await base(tableId).select().all();
+    console.log(`Fetching from Airtable table: "${tableName}"`);
+    const records = await base(tableName).select().all();
+    console.log(`Retrieved ${records.length} records from Airtable`);
 
     return records.map((record) => {
       const fields = record.fields;
@@ -67,7 +71,11 @@ export async function getSubscriptions(): Promise<Subscription[]> {
       };
     });
   } catch (error: any) {
-    console.error("Airtable error details:", error);
+    console.error("Airtable error details:", {
+      message: error.message,
+      statusCode: error.statusCode,
+      error: error.error,
+    });
     throw error;
   }
 }
@@ -76,7 +84,7 @@ export async function updateReminderDays(
   subscriptionId: string,
   reminderDays: number
 ): Promise<void> {
-  await base(tableId).update(subscriptionId, {
+  await base(tableName).update(subscriptionId, {
     "Reminder Days": reminderDays,
   });
 }
