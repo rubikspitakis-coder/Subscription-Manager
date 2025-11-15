@@ -1,20 +1,27 @@
 import { useState } from "react";
-import { addDays, addMonths } from "date-fns";
+import { addDays, addMonths, subDays } from "date-fns";
 import { StatsCard } from "@/components/stats-card";
 import { SubscriptionCard } from "@/components/subscription-card";
+import { SubscriptionsTable } from "@/components/subscriptions-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   CreditCard,
   AlertCircle,
   Search,
   Plus,
+  LayoutGrid,
+  Table as TableIcon,
 } from "lucide-react";
+
+type ViewMode = "grid" | "table";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
-  // todo: remove mock functionality
+  // todo: remove mock functionality - these fields would come from Airtable
   const [subscriptions, setSubscriptions] = useState([
     {
       id: "1",
@@ -26,6 +33,10 @@ export default function Dashboard() {
       password: "secure_password_123",
       reminderDays: 30,
       status: "critical" as const,
+      category: "AI Assistant",
+      notes: "Used for coding and research",
+      lastLogin: subDays(new Date(), 2),
+      paymentMethod: "Visa **** 4242",
     },
     {
       id: "2",
@@ -37,6 +48,10 @@ export default function Dashboard() {
       password: "another_secure_pass",
       reminderDays: 30,
       status: "urgent" as const,
+      category: "AI Assistant",
+      notes: "Long-form content generation",
+      lastLogin: subDays(new Date(), 5),
+      paymentMethod: "Mastercard **** 5555",
     },
     {
       id: "3",
@@ -48,6 +63,10 @@ export default function Dashboard() {
       password: "creative_password",
       reminderDays: 30,
       status: "warning" as const,
+      category: "Image Generation",
+      notes: "Marketing assets and design",
+      lastLogin: subDays(new Date(), 1),
+      paymentMethod: "Amex **** 1234",
     },
     {
       id: "4",
@@ -59,6 +78,10 @@ export default function Dashboard() {
       password: "code_master_2024",
       reminderDays: 30,
       status: "active" as const,
+      category: "Developer Tools",
+      notes: "Code completion and suggestions",
+      lastLogin: new Date(),
+      paymentMethod: "Visa **** 4242",
     },
     {
       id: "5",
@@ -70,6 +93,10 @@ export default function Dashboard() {
       password: "search_pro_pass",
       reminderDays: 30,
       status: "active" as const,
+      category: "Research",
+      notes: "Academic and market research",
+      lastLogin: subDays(new Date(), 3),
+      paymentMethod: "Visa **** 4242",
     },
   ]);
 
@@ -78,6 +105,14 @@ export default function Dashboard() {
       subs.map(sub => sub.id === id ? { ...sub, reminderDays: days } : sub)
     );
     console.log(`Updated reminder days for subscription ${id} to ${days} days`);
+  };
+
+  const handleViewDetails = (id: string) => {
+    console.log(`View details for subscription ${id}`);
+  };
+
+  const handleSendReminder = (id: string) => {
+    console.log(`Sending reminder for subscription ${id}`);
   };
 
   const upcomingRenewals = subscriptions.filter(
@@ -126,7 +161,7 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -137,17 +172,38 @@ export default function Dashboard() {
                   data-testid="input-search-subscriptions"
                 />
               </div>
+              <ToggleGroup
+                type="single"
+                value={viewMode}
+                onValueChange={(value) => value && setViewMode(value as ViewMode)}
+                data-testid="toggle-view-mode"
+              >
+                <ToggleGroupItem value="grid" aria-label="Grid view" data-testid="button-grid-view">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="table" aria-label="Table view" data-testid="button-table-view">
+                  <TableIcon className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredSubscriptions.map((subscription) => (
-                <SubscriptionCard
-                  key={subscription.id}
-                  subscription={subscription}
-                  onUpdateReminderDays={handleUpdateReminderDays}
-                />
-              ))}
-            </div>
+            {viewMode === "grid" ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredSubscriptions.map((subscription) => (
+                  <SubscriptionCard
+                    key={subscription.id}
+                    subscription={subscription}
+                    onUpdateReminderDays={handleUpdateReminderDays}
+                  />
+                ))}
+              </div>
+            ) : (
+              <SubscriptionsTable
+                subscriptions={filteredSubscriptions}
+                onViewDetails={handleViewDetails}
+                onSendReminder={handleSendReminder}
+              />
+            )}
 
             {filteredSubscriptions.length === 0 && (
               <div className="text-center py-12">
