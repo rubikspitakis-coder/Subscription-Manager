@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { addDays, addMonths, subDays } from "date-fns";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { StatsCard } from "@/components/stats-card";
 import { SubscriptionCard } from "@/components/subscription-card";
 import { SubscriptionsTable } from "@/components/subscriptions-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useToast } from "@/hooks/use-toast";
 import {
   CreditCard,
   AlertCircle,
@@ -17,94 +19,72 @@ import {
 
 type ViewMode = "grid" | "table";
 
+interface Subscription {
+  id: string;
+  name: string;
+  cost: number;
+  billingPeriod: "monthly" | "yearly";
+  renewalDate: string;
+  username?: string;
+  password?: string;
+  reminderDays?: number;
+  status: "active" | "warning" | "urgent" | "critical";
+  category?: string;
+  notes?: string;
+  lastLogin?: string;
+  paymentMethod?: string;
+}
+
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const { toast } = useToast();
 
-  // todo: remove mock functionality - these fields would come from Airtable
-  const [subscriptions, setSubscriptions] = useState([
-    {
-      id: "1",
-      name: "ChatGPT Plus",
-      cost: 20,
-      billingPeriod: "monthly" as const,
-      renewalDate: addDays(new Date(), 5),
-      username: "user@example.com",
-      password: "secure_password_123",
-      reminderDays: 30,
-      status: "critical" as const,
-      category: "AI Assistant",
-      notes: "Used for coding and research",
-      lastLogin: subDays(new Date(), 2),
-      paymentMethod: "Visa **** 4242",
+  const { data: subscriptions = [], isLoading } = useQuery<Subscription[]>({
+    queryKey: ["/api/subscriptions"],
+  });
+
+  const updateReminderDaysMutation = useMutation({
+    mutationFn: async ({ id, days }: { id: string; days: number }) => {
+      return apiRequest("PATCH", `/api/subscriptions/${id}/reminder-days`, { reminderDays: days });
     },
-    {
-      id: "2",
-      name: "Claude Pro",
-      cost: 240,
-      billingPeriod: "yearly" as const,
-      renewalDate: addDays(new Date(), 12),
-      username: "user@example.com",
-      password: "another_secure_pass",
-      reminderDays: 30,
-      status: "urgent" as const,
-      category: "AI Assistant",
-      notes: "Long-form content generation",
-      lastLogin: subDays(new Date(), 5),
-      paymentMethod: "Mastercard **** 5555",
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscriptions"] });
+      toast({
+        title: "Success",
+        description: "Reminder days updated successfully",
+      });
     },
-    {
-      id: "3",
-      name: "Midjourney Annual",
-      cost: 360,
-      billingPeriod: "yearly" as const,
-      renewalDate: addDays(new Date(), 22),
-      username: "artist@example.com",
-      password: "creative_password",
-      reminderDays: 30,
-      status: "warning" as const,
-      category: "Image Generation",
-      notes: "Marketing assets and design",
-      lastLogin: subDays(new Date(), 1),
-      paymentMethod: "Amex **** 1234",
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update reminder days",
+        variant: "destructive",
+      });
     },
-    {
-      id: "4",
-      name: "GitHub Copilot",
-      cost: 120,
-      billingPeriod: "yearly" as const,
-      renewalDate: addMonths(new Date(), 2),
-      username: "dev@example.com",
-      password: "code_master_2024",
-      reminderDays: 30,
-      status: "active" as const,
-      category: "Developer Tools",
-      notes: "Code completion and suggestions",
-      lastLogin: new Date(),
-      paymentMethod: "Visa **** 4242",
+  });
+
+  const sendReminderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/subscriptions/${id}/send-reminder`);
     },
-    {
-      id: "5",
-      name: "Perplexity Pro",
-      cost: 200,
-      billingPeriod: "yearly" as const,
-      renewalDate: addMonths(new Date(), 5),
-      username: "research@example.com",
-      password: "search_pro_pass",
-      reminderDays: 30,
-      status: "active" as const,
-      category: "Research",
-      notes: "Academic and market research",
-      lastLogin: subDays(new Date(), 3),
-      paymentMethod: "Visa **** 4242",
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Reminder sent successfully",
+      });
     },
-  ]);
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reminder",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleUpdateReminderDays = (id: string, days: number) => {
-    setSubscriptions(subs =>
-      subs.map(sub => sub.id === id ? { ...sub, reminderDays: days } : sub)
-    );
-    console.log(`Updated reminder days for subscription ${id} to ${days} days`);
+    updateReminderDaysMutation.mutate({ id, days });
   };
 
   const handleViewDetails = (id: string) => {
@@ -112,19 +92,34 @@ export default function Dashboard() {
   };
 
   const handleSendReminder = (id: string) => {
-    console.log(`Sending reminder for subscription ${id}`);
+    sendReminderMutation.mutate(id);
   };
 
-  const upcomingRenewals = subscriptions.filter(
-    (sub) => {
-      const days = Math.floor((sub.renewalDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-      return days <= 30;
-    }
-  ).length;
+  const upcomingRenewals = subscriptions.filter((sub) => {
+    const days = Math.floor(
+      (new Date(sub.renewalDate).getTime() - new Date().getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+    return days <= 30;
+  }).length;
 
   const filteredSubscriptions = subscriptions.filter((sub) =>
     sub.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const subscriptionsWithDates = filteredSubscriptions.map((sub) => ({
+    ...sub,
+    renewalDate: new Date(sub.renewalDate),
+    lastLogin: sub.lastLogin ? new Date(sub.lastLogin) : undefined,
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Loading subscriptions...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -178,10 +173,18 @@ export default function Dashboard() {
                 onValueChange={(value) => value && setViewMode(value as ViewMode)}
                 data-testid="toggle-view-mode"
               >
-                <ToggleGroupItem value="grid" aria-label="Grid view" data-testid="button-grid-view">
+                <ToggleGroupItem
+                  value="grid"
+                  aria-label="Grid view"
+                  data-testid="button-grid-view"
+                >
                   <LayoutGrid className="h-4 w-4" />
                 </ToggleGroupItem>
-                <ToggleGroupItem value="table" aria-label="Table view" data-testid="button-table-view">
+                <ToggleGroupItem
+                  value="table"
+                  aria-label="Table view"
+                  data-testid="button-table-view"
+                >
                   <TableIcon className="h-4 w-4" />
                 </ToggleGroupItem>
               </ToggleGroup>
@@ -189,7 +192,7 @@ export default function Dashboard() {
 
             {viewMode === "grid" ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredSubscriptions.map((subscription) => (
+                {subscriptionsWithDates.map((subscription) => (
                   <SubscriptionCard
                     key={subscription.id}
                     subscription={subscription}
@@ -199,7 +202,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <SubscriptionsTable
-                subscriptions={filteredSubscriptions}
+                subscriptions={subscriptionsWithDates}
                 onViewDetails={handleViewDetails}
                 onSendReminder={handleSendReminder}
               />

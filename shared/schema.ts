@@ -1,18 +1,24 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const subscriptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  cost: z.number(),
+  billingPeriod: z.enum(["monthly", "yearly"]),
+  renewalDate: z.string(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  reminderDays: z.number().optional(),
+  status: z.enum(["active", "warning", "urgent", "critical"]),
+  category: z.string().optional(),
+  notes: z.string().optional(),
+  lastLogin: z.string().optional(),
+  paymentMethod: z.string().optional(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const updateReminderDaysSchema = z.object({
+  reminderDays: z.number().min(1),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type Subscription = z.infer<typeof subscriptionSchema>;
+export type UpdateReminderDays = z.infer<typeof updateReminderDaysSchema>;
