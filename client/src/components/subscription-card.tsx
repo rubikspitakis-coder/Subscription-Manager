@@ -3,12 +3,15 @@ import { format, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ChevronDown,
   ChevronUp,
   Mail,
   Calendar,
   DollarSign,
+  Bell,
 } from "lucide-react";
 import { CredentialField } from "./credential-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -17,14 +20,17 @@ interface Subscription {
   id: string;
   name: string;
   cost: number;
+  billingPeriod: "monthly" | "yearly";
   renewalDate: Date;
   username?: string;
   password?: string;
+  reminderDays?: number;
   status: "active" | "warning" | "urgent" | "critical";
 }
 
 interface SubscriptionCardProps {
   subscription: Subscription;
+  onUpdateReminderDays?: (id: string, days: number) => void;
 }
 
 function getStatusVariant(status: Subscription["status"]) {
@@ -48,13 +54,22 @@ function getStatusLabel(status: Subscription["status"], daysUntil: number) {
   return "Active";
 }
 
-export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
+export function SubscriptionCard({ subscription, onUpdateReminderDays }: SubscriptionCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [reminderDays, setReminderDays] = useState(subscription.reminderDays?.toString() || "30");
   const daysUntilRenewal = differenceInDays(subscription.renewalDate, new Date());
   const hasCredentials = subscription.username || subscription.password;
 
   const handleSendReminder = () => {
     console.log(`Sending reminder for ${subscription.name}`);
+  };
+
+  const handleReminderDaysChange = (value: string) => {
+    setReminderDays(value);
+    const days = parseInt(value);
+    if (!isNaN(days) && days > 0 && onUpdateReminderDays) {
+      onUpdateReminderDays(subscription.id, days);
+    }
   };
 
   return (
@@ -68,7 +83,9 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
             <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
-                <span data-testid={`text-cost-${subscription.id}`}>${subscription.cost}/mo</span>
+                <span data-testid={`text-cost-${subscription.id}`}>
+                  ${subscription.cost}/{subscription.billingPeriod === "yearly" ? "yr" : "mo"}
+                </span>
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -84,16 +101,36 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSendReminder}
-            data-testid={`button-send-reminder-${subscription.id}`}
-          >
-            <Mail className="h-3 w-3 mr-2" />
-            Send Reminder
-          </Button>
+        <div className="space-y-3">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label htmlFor={`reminder-${subscription.id}`} className="text-xs text-muted-foreground flex items-center gap-1">
+                <Bell className="h-3 w-3" />
+                Remind me (days before renewal)
+              </Label>
+              <Input
+                id={`reminder-${subscription.id}`}
+                type="number"
+                min="1"
+                value={reminderDays}
+                onChange={(e) => handleReminderDaysChange(e.target.value)}
+                className="mt-1"
+                data-testid={`input-reminder-days-${subscription.id}`}
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSendReminder}
+              data-testid={`button-send-reminder-${subscription.id}`}
+            >
+              <Mail className="h-3 w-3 mr-2" />
+              Send Now
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Auto-reminders: Daily when ≤ 5 days until renewal
+          </p>
         </div>
 
         {hasCredentials && (
@@ -105,7 +142,7 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
                 className="w-full justify-between px-0 hover:bg-transparent"
                 data-testid={`button-toggle-credentials-${subscription.id}`}
               >
-                <span className="text-xs font-medium">Credentials</span>
+                <span className="text-xs font-medium">Login Credentials</span>
                 {isOpen ? (
                   <ChevronUp className="h-4 w-4" />
                 ) : (

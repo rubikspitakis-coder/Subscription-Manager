@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { addDays } from "date-fns";
+import { addDays, addMonths } from "date-fns";
 import { StatsCard } from "@/components/stats-card";
 import { SubscriptionCard } from "@/components/subscription-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   CreditCard,
-  DollarSign,
   AlertCircle,
   Search,
   Plus,
@@ -15,54 +14,80 @@ import {
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const mockSubscriptions = [
+  // todo: remove mock functionality
+  const [subscriptions, setSubscriptions] = useState([
     {
       id: "1",
       name: "ChatGPT Plus",
       cost: 20,
+      billingPeriod: "monthly" as const,
       renewalDate: addDays(new Date(), 5),
       username: "user@example.com",
       password: "secure_password_123",
+      reminderDays: 30,
       status: "critical" as const,
     },
     {
       id: "2",
       name: "Claude Pro",
-      cost: 20,
+      cost: 240,
+      billingPeriod: "yearly" as const,
       renewalDate: addDays(new Date(), 12),
       username: "user@example.com",
       password: "another_secure_pass",
+      reminderDays: 30,
       status: "urgent" as const,
     },
     {
       id: "3",
-      name: "Midjourney",
-      cost: 30,
+      name: "Midjourney Annual",
+      cost: 360,
+      billingPeriod: "yearly" as const,
       renewalDate: addDays(new Date(), 22),
       username: "artist@example.com",
       password: "creative_password",
+      reminderDays: 30,
       status: "warning" as const,
     },
     {
       id: "4",
       name: "GitHub Copilot",
-      cost: 10,
-      renewalDate: addDays(new Date(), 45),
+      cost: 120,
+      billingPeriod: "yearly" as const,
+      renewalDate: addMonths(new Date(), 2),
       username: "dev@example.com",
       password: "code_master_2024",
+      reminderDays: 30,
       status: "active" as const,
     },
-  ];
+    {
+      id: "5",
+      name: "Perplexity Pro",
+      cost: 200,
+      billingPeriod: "yearly" as const,
+      renewalDate: addMonths(new Date(), 5),
+      username: "research@example.com",
+      password: "search_pro_pass",
+      reminderDays: 30,
+      status: "active" as const,
+    },
+  ]);
 
-  const totalCost = mockSubscriptions.reduce((sum, sub) => sum + sub.cost, 0);
-  const upcomingRenewals = mockSubscriptions.filter(
+  const handleUpdateReminderDays = (id: string, days: number) => {
+    setSubscriptions(subs =>
+      subs.map(sub => sub.id === id ? { ...sub, reminderDays: days } : sub)
+    );
+    console.log(`Updated reminder days for subscription ${id} to ${days} days`);
+  };
+
+  const upcomingRenewals = subscriptions.filter(
     (sub) => {
       const days = Math.floor((sub.renewalDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-      return days <= 14;
+      return days <= 30;
     }
   ).length;
 
-  const filteredSubscriptions = mockSubscriptions.filter((sub) =>
+  const filteredSubscriptions = subscriptions.filter((sub) =>
     sub.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -83,26 +108,19 @@ export default function Dashboard() {
 
       <div className="flex-1 overflow-auto px-6 py-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <StatsCard
               title="Total Subscriptions"
-              value={mockSubscriptions.length}
+              value={subscriptions.length}
               icon={CreditCard}
-              description={`${mockSubscriptions.length} active subscriptions`}
+              description={`${subscriptions.length} active subscriptions`}
               testId="card-total-subscriptions"
-            />
-            <StatsCard
-              title="Monthly Spend"
-              value={`$${totalCost}`}
-              icon={DollarSign}
-              description={`$${totalCost * 12}/year total`}
-              testId="card-monthly-spend"
             />
             <StatsCard
               title="Upcoming Renewals"
               value={upcomingRenewals}
               icon={AlertCircle}
-              description="Next 14 days"
+              description="Next 30 days"
               testId="card-upcoming-renewals"
             />
           </div>
@@ -126,6 +144,7 @@ export default function Dashboard() {
                 <SubscriptionCard
                   key={subscription.id}
                   subscription={subscription}
+                  onUpdateReminderDays={handleUpdateReminderDays}
                 />
               ))}
             </div>
