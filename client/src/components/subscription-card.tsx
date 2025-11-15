@@ -1,0 +1,139 @@
+import { useState } from "react";
+import { format, differenceInDays } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronDown,
+  ChevronUp,
+  Mail,
+  Calendar,
+  DollarSign,
+} from "lucide-react";
+import { CredentialField } from "./credential-field";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+interface Subscription {
+  id: string;
+  name: string;
+  cost: number;
+  renewalDate: Date;
+  username?: string;
+  password?: string;
+  status: "active" | "warning" | "urgent" | "critical";
+}
+
+interface SubscriptionCardProps {
+  subscription: Subscription;
+}
+
+function getStatusVariant(status: Subscription["status"]) {
+  switch (status) {
+    case "active":
+      return "secondary";
+    case "warning":
+      return "default";
+    case "urgent":
+      return "default";
+    case "critical":
+      return "destructive";
+  }
+}
+
+function getStatusLabel(status: Subscription["status"], daysUntil: number) {
+  if (daysUntil < 0) return "Expired";
+  if (status === "critical") return `${daysUntil}d left`;
+  if (status === "urgent") return `${daysUntil}d left`;
+  if (status === "warning") return `${daysUntil}d left`;
+  return "Active";
+}
+
+export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const daysUntilRenewal = differenceInDays(subscription.renewalDate, new Date());
+  const hasCredentials = subscription.username || subscription.password;
+
+  const handleSendReminder = () => {
+    console.log(`Sending reminder for ${subscription.name}`);
+  };
+
+  return (
+    <Card data-testid={`card-subscription-${subscription.id}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base" data-testid={`text-subscription-name-${subscription.id}`}>
+              {subscription.name}
+            </CardTitle>
+            <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3" />
+                <span data-testid={`text-cost-${subscription.id}`}>${subscription.cost}/mo</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                <span data-testid={`text-renewal-${subscription.id}`}>
+                  {format(subscription.renewalDate, "MMM d, yyyy")}
+                </span>
+              </div>
+            </div>
+          </div>
+          <Badge variant={getStatusVariant(subscription.status)} data-testid={`badge-status-${subscription.id}`}>
+            {getStatusLabel(subscription.status, daysUntilRenewal)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSendReminder}
+            data-testid={`button-send-reminder-${subscription.id}`}
+          >
+            <Mail className="h-3 w-3 mr-2" />
+            Send Reminder
+          </Button>
+        </div>
+
+        {hasCredentials && (
+          <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between px-0 hover:bg-transparent"
+                data-testid={`button-toggle-credentials-${subscription.id}`}
+              >
+                <span className="text-xs font-medium">Credentials</span>
+                {isOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-2">
+              {subscription.username && (
+                <CredentialField
+                  label="Username"
+                  value={subscription.username}
+                  type="text"
+                  testId={`credential-username-${subscription.id}`}
+                />
+              )}
+              {subscription.password && (
+                <CredentialField
+                  label="Password"
+                  value={subscription.password}
+                  type="password"
+                  testId={`credential-password-${subscription.id}`}
+                />
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
