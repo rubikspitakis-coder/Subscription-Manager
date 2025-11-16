@@ -2,6 +2,7 @@ import { subscriptions, type Subscription, type InsertSubscription } from "@shar
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { differenceInDays } from "date-fns";
+import { encryptPassword, decryptPassword } from "./crypto";
 
 export interface IStorage {
   getSubscriptions(): Promise<Subscription[]>;
@@ -28,6 +29,7 @@ export class DatabaseStorage implements IStorage {
     return results.map(sub => ({
       ...sub,
       status: getStatus(sub.renewalDate),
+      password: decryptPassword(sub.password),
     }));
   }
 
@@ -38,23 +40,29 @@ export class DatabaseStorage implements IStorage {
     return {
       ...subscription,
       status: getStatus(subscription.renewalDate),
+      password: decryptPassword(subscription.password),
     };
   }
 
   async createSubscription(insertSubscription: InsertSubscription): Promise<Subscription> {
     const status = getStatus(new Date(insertSubscription.renewalDate));
     
+    // Encrypt password before storing
+    const dataToInsert = {
+      ...insertSubscription,
+      password: encryptPassword(insertSubscription.password),
+      status,
+    };
+    
     const [subscription] = await db
       .insert(subscriptions)
-      .values({
-        ...insertSubscription,
-        status,
-      })
+      .values(dataToInsert)
       .returning();
     
     return {
       ...subscription,
       status: getStatus(subscription.renewalDate),
+      password: decryptPassword(subscription.password),
     };
   }
 
@@ -68,12 +76,16 @@ export class DatabaseStorage implements IStorage {
   async updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription | undefined> {
     const status = data.renewalDate ? getStatus(new Date(data.renewalDate)) : undefined;
     
+    // Encrypt password if it's being updated
+    const dataToUpdate = {
+      ...data,
+      ...(data.password !== undefined && { password: encryptPassword(data.password) }),
+      ...(status && { status }),
+    };
+    
     const [subscription] = await db
       .update(subscriptions)
-      .set({
-        ...data,
-        ...(status && { status }),
-      })
+      .set(dataToUpdate)
       .where(eq(subscriptions.id, id))
       .returning();
     
@@ -84,6 +96,7 @@ export class DatabaseStorage implements IStorage {
     return {
       ...subscription,
       status: getStatus(subscription.renewalDate),
+      password: decryptPassword(subscription.password),
     };
   }
 

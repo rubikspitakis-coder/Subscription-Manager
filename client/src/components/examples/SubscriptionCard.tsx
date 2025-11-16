@@ -3,7 +3,7 @@ import { addDays } from "date-fns";
 
 export default function SubscriptionCardExample() {
   const subscription = {
-    id: "1",
+    id: 1,
     name: "ChatGPT Plus",
     cost: 240,
     billingPeriod: "yearly" as const,
@@ -12,6 +12,11 @@ export default function SubscriptionCardExample() {
     password: "secure_password_123",
     reminderDays: 30,
     status: "critical" as const,
+    category: null,
+    notes: null,
+    lastLogin: null,
+    paymentMethod: null,
+    createdAt: new Date(),
   };
 
   return (

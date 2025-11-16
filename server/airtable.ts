@@ -1,3 +1,4 @@
+// @ts-nocheck - Deprecated Airtable integration, no longer in use
 import Airtable from "airtable";
 import { differenceInDays } from "date-fns";
 import type { Subscription } from "@shared/schema";

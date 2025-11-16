@@ -4,7 +4,7 @@ import { addDays, subDays } from "date-fns";
 export default function SubscriptionsTableExample() {
   const subscriptions = [
     {
-      id: "1",
+      id: 1,
       name: "ChatGPT Plus",
       cost: 20,
       billingPeriod: "monthly" as const,
@@ -17,9 +17,10 @@ export default function SubscriptionsTableExample() {
       notes: "Used for coding and research",
       lastLogin: subDays(new Date(), 2),
       paymentMethod: "Visa **** 4242",
+      createdAt: new Date(),
     },
     {
-      id: "2",
+      id: 2,
       name: "Claude Pro",
       cost: 240,
       billingPeriod: "yearly" as const,
@@ -32,6 +33,7 @@ export default function SubscriptionsTableExample() {
       notes: "Long-form content generation",
       lastLogin: subDays(new Date(), 5),
       paymentMethod: "Mastercard **** 5555",
+      createdAt: new Date(),
     },
   ];
 
