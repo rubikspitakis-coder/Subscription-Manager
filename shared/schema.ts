@@ -2,6 +2,13 @@ import { z } from "zod";
 import { pgTable, serial, text, real, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const billingPeriodEnum = pgEnum("billing_period", ["monthly", "yearly"]);
 export const statusEnum = pgEnum("status", ["active", "warning", "urgent", "critical"]);
 
@@ -39,6 +46,12 @@ export const updateReminderDaysSchema = z.object({
   reminderDays: z.number().min(1),
 });
 
+export type User = typeof users.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type UpdateReminderDays = z.infer<typeof updateReminderDaysSchema>;
+
+export const loginSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+});

@@ -1,10 +1,51 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { updateReminderDaysSchema, insertSubscriptionSchema } from "@shared/schema";
+import { updateReminderDaysSchema, insertSubscriptionSchema, loginSchema } from "@shared/schema";
+import { requireAuth } from "./auth";
+import passport from "passport";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.get("/api/subscriptions", async (req, res) => {
+  // Auth routes
+  app.post("/api/auth/login", (req, res, next) => {
+    const result = loginSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ error: info?.message || "Invalid credentials" });
+      }
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json({ id: user.id, username: user.username });
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout(() => {
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/auth/me", (req, res) => {
+    if (req.isAuthenticated()) {
+      const user = req.user as any;
+      res.json({ id: user.id, username: user.username });
+    } else {
+      res.status(401).json({ error: "Not authenticated" });
+    }
+  });
+
+  // Protected subscription routes
+  app.get("/api/subscriptions", requireAuth, async (req, res) => {
     try {
       const subscriptions = await storage.getSubscriptions();
       res.json(subscriptions);
@@ -17,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/subscriptions/:id", async (req, res) => {
+  app.get("/api/subscriptions/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const subscription = await storage.getSubscription(id);
@@ -36,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/subscriptions", async (req, res) => {
+  app.post("/api/subscriptions", requireAuth, async (req, res) => {
     try {
       const result = insertSubscriptionSchema.safeParse(req.body);
       
@@ -55,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/subscriptions/:id", async (req, res) => {
+  app.patch("/api/subscriptions/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const result = insertSubscriptionSchema.partial().safeParse(req.body);
@@ -80,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/subscriptions/:id", async (req, res) => {
+  app.delete("/api/subscriptions/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteSubscription(id);
@@ -94,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/subscriptions/:id/reminder-days", async (req, res) => {
+  app.patch("/api/subscriptions/:id/reminder-days", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const result = updateReminderDaysSchema.safeParse(req.body);
@@ -114,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/subscriptions/:id/send-reminder", async (req, res) => {
+  app.post("/api/subscriptions/:id/send-reminder", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       console.log(`Sending reminder for subscription ${id}`);
