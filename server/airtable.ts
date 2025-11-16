@@ -38,13 +38,13 @@ export async function getSubscriptions(): Promise<Subscription[]> {
     return records.map((record) => {
       const fields = record.fields;
       
-      // Parse renewal date
-      const renewalDateStr = fields["Renewal Date"] as string;
+      // Parse renewal date - using "Subscription Expiry Date" field
+      const renewalDateStr = fields["Subscription Expiry Date"] as string;
       const renewalDate = renewalDateStr ? new Date(renewalDateStr) : new Date();
       
-      // Parse cost - handle both number and string formats
+      // Parse cost - using "Subscription Cost" field
       let cost = 0;
-      const costField = fields["Cost"];
+      const costField = fields["Subscription Cost"];
       if (typeof costField === "number") {
         cost = costField;
       } else if (typeof costField === "string") {
@@ -54,16 +54,16 @@ export async function getSubscriptions(): Promise<Subscription[]> {
 
       return {
         id: record.id,
-        name: (fields["Name"] as string) || "Unnamed",
+        name: (fields["Tool Name"] as string) || "Unnamed",
         cost,
-        billingPeriod: (fields["Billing Period"] as "monthly" | "yearly") || "yearly",
+        billingPeriod: (fields["Billing Period"] as "monthly" | "yearly") || "monthly",
         renewalDate: renewalDate.toISOString(),
         username: fields["Username"] as string | undefined,
         password: fields["Password"] as string | undefined,
         reminderDays: Number(fields["Reminder Days"] || 30),
         status: getStatus(renewalDate),
-        category: fields["Category"] as string | undefined,
-        notes: fields["Description"] as string | undefined,
+        category: fields["Type"] as string | undefined,
+        notes: fields["Notes"] as string | undefined,
         lastLogin: fields["Last Login"] 
           ? new Date(fields["Last Login"] as string).toISOString() 
           : undefined,
