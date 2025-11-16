@@ -65,6 +65,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const subscription = await storage.updateSubscription(id, result.data);
+      
+      if (!subscription) {
+        return res.status(404).json({ error: "Subscription not found" });
+      }
+      
       res.json(subscription);
     } catch (error: any) {
       console.error("Error updating subscription:", error);

@@ -8,7 +8,7 @@ export interface IStorage {
   getSubscription(id: number): Promise<Subscription | undefined>;
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   updateReminderDays(id: number, reminderDays: number): Promise<void>;
-  updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription>;
+  updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription | undefined>;
   deleteSubscription(id: number): Promise<void>;
 }
 
@@ -65,7 +65,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(subscriptions.id, id));
   }
 
-  async updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription> {
+  async updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription | undefined> {
     const status = data.renewalDate ? getStatus(new Date(data.renewalDate)) : undefined;
     
     const [subscription] = await db
@@ -76,6 +76,10 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(subscriptions.id, id))
       .returning();
+    
+    if (!subscription) {
+      return undefined;
+    }
     
     return {
       ...subscription,
