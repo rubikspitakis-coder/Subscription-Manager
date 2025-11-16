@@ -1,38 +1,91 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { subscriptions, type Subscription, type InsertSubscription } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { differenceInDays } from "date-fns";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getSubscriptions(): Promise<Subscription[]>;
+  getSubscription(id: number): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateReminderDays(id: number, reminderDays: number): Promise<void>;
+  updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription>;
+  deleteSubscription(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+function getStatus(renewalDate: Date): Subscription["status"] {
+  const daysUntil = differenceInDays(renewalDate, new Date());
+  if (daysUntil < 0) return "critical";
+  if (daysUntil <= 5) return "critical";
+  if (daysUntil <= 14) return "urgent";
+  if (daysUntil <= 30) return "warning";
+  return "active";
+}
 
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getSubscriptions(): Promise<Subscription[]> {
+    const results = await db.select().from(subscriptions);
+    
+    return results.map(sub => ({
+      ...sub,
+      status: getStatus(sub.renewalDate),
+    }));
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getSubscription(id: number): Promise<Subscription | undefined> {
+    const [subscription] = await db.select().from(subscriptions).where(eq(subscriptions.id, id));
+    if (!subscription) return undefined;
+    
+    return {
+      ...subscription,
+      status: getStatus(subscription.renewalDate),
+    };
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createSubscription(insertSubscription: InsertSubscription): Promise<Subscription> {
+    const status = getStatus(new Date(insertSubscription.renewalDate));
+    
+    const [subscription] = await db
+      .insert(subscriptions)
+      .values({
+        ...insertSubscription,
+        status,
+      })
+      .returning();
+    
+    return {
+      ...subscription,
+      status: getStatus(subscription.renewalDate),
+    };
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateReminderDays(id: number, reminderDays: number): Promise<void> {
+    await db
+      .update(subscriptions)
+      .set({ reminderDays })
+      .where(eq(subscriptions.id, id));
+  }
+
+  async updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription> {
+    const status = data.renewalDate ? getStatus(new Date(data.renewalDate)) : undefined;
+    
+    const [subscription] = await db
+      .update(subscriptions)
+      .set({
+        ...data,
+        ...(status && { status }),
+      })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    
+    return {
+      ...subscription,
+      status: getStatus(subscription.renewalDate),
+    };
+  }
+
+  async deleteSubscription(id: number): Promise<void> {
+    await db.delete(subscriptions).where(eq(subscriptions.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

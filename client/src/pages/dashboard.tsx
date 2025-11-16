@@ -20,7 +20,7 @@ import {
 type ViewMode = "grid" | "table";
 
 interface Subscription {
-  id: string;
+  id: number;
   name: string;
   cost: number;
   billingPeriod: "monthly" | "yearly";
@@ -33,6 +33,7 @@ interface Subscription {
   notes?: string;
   lastLogin?: string;
   paymentMethod?: string;
+  createdAt: string;
 }
 
 export default function Dashboard() {
@@ -45,7 +46,7 @@ export default function Dashboard() {
   });
 
   const updateReminderDaysMutation = useMutation({
-    mutationFn: async ({ id, days }: { id: string; days: number }) => {
+    mutationFn: async ({ id, days }: { id: number; days: number }) => {
       return apiRequest("PATCH", `/api/subscriptions/${id}/reminder-days`, { reminderDays: days });
     },
     onSuccess: () => {
@@ -65,7 +66,7 @@ export default function Dashboard() {
   });
 
   const sendReminderMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: number) => {
       return apiRequest("POST", `/api/subscriptions/${id}/send-reminder`);
     },
     onSuccess: () => {
@@ -83,15 +84,15 @@ export default function Dashboard() {
     },
   });
 
-  const handleUpdateReminderDays = (id: string, days: number) => {
+  const handleUpdateReminderDays = (id: number, days: number) => {
     updateReminderDaysMutation.mutate({ id, days });
   };
 
-  const handleViewDetails = (id: string) => {
+  const handleViewDetails = (id: number) => {
     console.log(`View details for subscription ${id}`);
   };
 
-  const handleSendReminder = (id: string) => {
+  const handleSendReminder = (id: number) => {
     sendReminderMutation.mutate(id);
   };
 

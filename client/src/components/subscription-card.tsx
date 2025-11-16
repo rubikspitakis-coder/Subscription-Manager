@@ -17,7 +17,7 @@ import { CredentialField } from "./credential-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Subscription {
-  id: string;
+  id: number;
   name: string;
   cost: number;
   billingPeriod: "monthly" | "yearly";
@@ -30,7 +30,7 @@ interface Subscription {
 
 interface SubscriptionCardProps {
   subscription: Subscription;
-  onUpdateReminderDays?: (id: string, days: number) => void;
+  onUpdateReminderDays?: (id: number, days: number) => void;
 }
 
 function getStatusVariant(status: Subscription["status"]) {

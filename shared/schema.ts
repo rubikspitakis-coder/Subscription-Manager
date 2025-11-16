@@ -1,24 +1,37 @@
 import { z } from "zod";
+import { pgTable, serial, text, real, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 
-export const subscriptionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  cost: z.number(),
-  billingPeriod: z.enum(["monthly", "yearly"]),
-  renewalDate: z.string(),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  reminderDays: z.number().optional(),
-  status: z.enum(["active", "warning", "urgent", "critical"]),
-  category: z.string().optional(),
-  notes: z.string().optional(),
-  lastLogin: z.string().optional(),
-  paymentMethod: z.string().optional(),
+export const billingPeriodEnum = pgEnum("billing_period", ["monthly", "yearly"]);
+export const statusEnum = pgEnum("status", ["active", "warning", "urgent", "critical"]);
+
+export const subscriptions = pgTable("subscriptions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  cost: real("cost").notNull().default(0),
+  billingPeriod: billingPeriodEnum("billing_period").notNull().default("monthly"),
+  renewalDate: timestamp("renewal_date").notNull(),
+  username: text("username"),
+  password: text("password"),
+  reminderDays: integer("reminder_days").default(30),
+  status: statusEnum("status").notNull().default("active"),
+  category: text("category"),
+  notes: text("notes"),
+  lastLogin: timestamp("last_login"),
+  paymentMethod: text("payment_method"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  status: true,
 });
 
 export const updateReminderDaysSchema = z.object({
   reminderDays: z.number().min(1),
 });
 
-export type Subscription = z.infer<typeof subscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type UpdateReminderDays = z.infer<typeof updateReminderDaysSchema>;

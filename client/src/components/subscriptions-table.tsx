@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Mail, Eye } from "lucide-react";
 
 interface Subscription {
-  id: string;
+  id: number;
   name: string;
   cost: number;
   billingPeriod: "monthly" | "yearly";
@@ -29,8 +29,8 @@ interface Subscription {
 
 interface SubscriptionsTableProps {
   subscriptions: Subscription[];
-  onViewDetails?: (id: string) => void;
-  onSendReminder?: (id: string) => void;
+  onViewDetails?: (id: number) => void;
+  onSendReminder?: (id: number) => void;
 }
 
 function getStatusVariant(status: Subscription["status"]) {
