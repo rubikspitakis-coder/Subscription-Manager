@@ -12,6 +12,7 @@ import {
   Calendar,
   DollarSign,
   Bell,
+  Edit,
 } from "lucide-react";
 import { CredentialField } from "./credential-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -31,6 +32,7 @@ interface Subscription {
 interface SubscriptionCardProps {
   subscription: Subscription;
   onUpdateReminderDays?: (id: number, days: number) => void;
+  onEdit?: (subscription: Subscription) => void;
 }
 
 function getStatusVariant(status: Subscription["status"]) {
@@ -54,7 +56,7 @@ function getStatusLabel(status: Subscription["status"], daysUntil: number) {
   return "Active";
 }
 
-export function SubscriptionCard({ subscription, onUpdateReminderDays }: SubscriptionCardProps) {
+export function SubscriptionCard({ subscription, onUpdateReminderDays, onEdit }: SubscriptionCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [reminderDays, setReminderDays] = useState(subscription.reminderDays?.toString() || "30");
   const daysUntilRenewal = differenceInDays(subscription.renewalDate, new Date());
@@ -95,9 +97,22 @@ export function SubscriptionCard({ subscription, onUpdateReminderDays }: Subscri
               </div>
             </div>
           </div>
-          <Badge variant={getStatusVariant(subscription.status)} data-testid={`badge-status-${subscription.id}`}>
-            {getStatusLabel(subscription.status, daysUntilRenewal)}
-          </Badge>
+          <div className="flex flex-col gap-2 items-end">
+            <Badge variant={getStatusVariant(subscription.status)} data-testid={`badge-status-${subscription.id}`}>
+              {getStatusLabel(subscription.status, daysUntilRenewal)}
+            </Badge>
+            {onEdit && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0"
+                onClick={() => onEdit(subscription)}
+                data-testid={`button-edit-${subscription.id}`}
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

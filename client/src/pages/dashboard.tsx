@@ -5,6 +5,7 @@ import { StatsCard } from "@/components/stats-card";
 import { SubscriptionCard } from "@/components/subscription-card";
 import { SubscriptionsTable } from "@/components/subscriptions-table";
 import { AddSubscriptionDialog } from "@/components/add-subscription-dialog";
+import { EditSubscriptionDialog } from "@/components/edit-subscription-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -41,6 +42,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const { toast } = useToast();
 
   const { data: subscriptions = [], isLoading } = useQuery<Subscription[]>({
@@ -88,6 +91,11 @@ export default function Dashboard() {
 
   const handleUpdateReminderDays = (id: number, days: number) => {
     updateReminderDaysMutation.mutate({ id, days });
+  };
+
+  const handleEdit = (subscription: Subscription) => {
+    setSelectedSubscription(subscription);
+    setEditDialogOpen(true);
   };
 
   const handleViewDetails = (id: number) => {
@@ -203,6 +211,7 @@ export default function Dashboard() {
                     key={subscription.id}
                     subscription={subscription}
                     onUpdateReminderDays={handleUpdateReminderDays}
+                    onEdit={handleEdit}
                   />
                 ))}
               </div>
@@ -226,6 +235,12 @@ export default function Dashboard() {
       <AddSubscriptionDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
+      />
+
+      <EditSubscriptionDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        subscription={selectedSubscription}
       />
     </div>
   );
