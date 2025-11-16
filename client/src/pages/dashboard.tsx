@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { StatsCard } from "@/components/stats-card";
 import { SubscriptionCard } from "@/components/subscription-card";
 import { SubscriptionsTable } from "@/components/subscriptions-table";
+import { AddSubscriptionDialog } from "@/components/add-subscription-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -39,6 +40,7 @@ interface Subscription {
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: subscriptions = [], isLoading } = useQuery<Subscription[]>({
@@ -131,7 +133,10 @@ export default function Dashboard() {
             Manage your AI tool subscriptions
           </p>
         </div>
-        <Button data-testid="button-add-subscription">
+        <Button
+          data-testid="button-add-subscription"
+          onClick={() => setAddDialogOpen(true)}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Subscription
         </Button>
@@ -217,6 +222,11 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <AddSubscriptionDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+      />
     </div>
   );
 }

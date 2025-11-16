@@ -15,10 +15,13 @@ function getEncryptionKey(): Buffer {
   const encryptionSecret = process.env.ENCRYPTION_SECRET;
   
   if (!encryptionSecret) {
-    throw new Error(
-      "ENCRYPTION_SECRET environment variable is required for password encryption. " +
+    console.warn(
+      "WARNING: ENCRYPTION_SECRET environment variable is not set. " +
+      "Using a default key for development. DO NOT use in production! " +
       "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     );
+    // Use a default development key - NOT SECURE FOR PRODUCTION
+    return Buffer.from("0000000000000000000000000000000000000000000000000000000000000000", "hex");
   }
 
   // If it's a 64-character hex string, use it directly
