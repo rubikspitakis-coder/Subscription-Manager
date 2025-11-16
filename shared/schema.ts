@@ -22,7 +22,14 @@ export const subscriptions = pgTable("subscriptions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+export const insertSubscriptionSchema = createInsertSchema(subscriptions, {
+  renewalDate: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  lastLogin: z.union([z.string(), z.date(), z.undefined()]).transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ).optional(),
+}).omit({
   id: true,
   createdAt: true,
   status: true,
