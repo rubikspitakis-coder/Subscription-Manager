@@ -2,13 +2,13 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
 import { users, type User } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
-const MemoryStore = createMemoryStore(session);
+const PgSession = connectPg(session);
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
@@ -20,8 +20,10 @@ export function setupAuth(app: Express) {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
+    store: new PgSession({
+      pool: pool as any,
+      tableName: "session",
+      createTableIfMissing: true,
     }),
   };
 
