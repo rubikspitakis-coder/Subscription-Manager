@@ -14,6 +14,8 @@ export interface IStorage {
   updateReminderDays(id: number, reminderDays: number): Promise<void>;
   updateSubscription(id: number, data: Partial<InsertSubscription>): Promise<Subscription | undefined>;
   deleteSubscription(id: number): Promise<void>;
+  acknowledgeReminder(id: number): Promise<void>;
+  updateLastReminderSent(id: number): Promise<void>;
 }
 
 function getStatus(renewalDate: Date): Subscription["status"] {
@@ -105,6 +107,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSubscription(id: number): Promise<void> {
     await db.delete(subscriptions).where(eq(subscriptions.id, id));
+  }
+
+  async acknowledgeReminder(id: number): Promise<void> {
+    await db
+      .update(subscriptions)
+      .set({ reminderAcknowledged: new Date() })
+      .where(eq(subscriptions.id, id));
+  }
+
+  async updateLastReminderSent(id: number): Promise<void> {
+    await db
+      .update(subscriptions)
+      .set({ lastReminderSent: new Date() })
+      .where(eq(subscriptions.id, id));
   }
 }
 

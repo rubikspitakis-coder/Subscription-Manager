@@ -254,6 +254,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/subscriptions/:id/acknowledge", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.acknowledgeReminder(id);
+      res.json({ success: true, message: "Reminder acknowledged" });
+    } catch (error: any) {
+      console.error("Error acknowledging reminder:", error);
+      res.status(500).json({ 
+        error: "Failed to acknowledge reminder",
+        message: error.message 
+      });
+    }
+  });
+
   app.post("/api/subscriptions/import", requireAuth, upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {

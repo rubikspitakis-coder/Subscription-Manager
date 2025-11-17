@@ -17,6 +17,7 @@ import {
   Bell,
   Edit,
   ExternalLink,
+  Check,
 } from "lucide-react";
 import { CredentialField } from "./credential-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -89,8 +90,31 @@ export function SubscriptionCard({ subscription, onUpdateReminderDays, onEdit }:
     },
   });
 
+  const acknowledgeMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/subscriptions/${subscription.id}/acknowledge`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Reminder acknowledged",
+        description: "You won't receive another reminder for 5 days",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to acknowledge",
+        description: error.message || "Could not acknowledge reminder",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSendReminder = () => {
     sendReminderMutation.mutate();
+  };
+
+  const handleAcknowledge = () => {
+    acknowledgeMutation.mutate();
   };
 
   const handleReminderDaysChange = (value: string) => {
@@ -183,6 +207,16 @@ export function SubscriptionCard({ subscription, onUpdateReminderDays, onEdit }:
             >
               <Mail className="h-3 w-3 mr-2" />
               {sendReminderMutation.isPending ? "Sending..." : "Send Now"}
+            </Button>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleAcknowledge}
+              disabled={acknowledgeMutation.isPending}
+              data-testid={`button-acknowledge-${subscription.id}`}
+            >
+              <Check className="h-3 w-3 mr-2" />
+              {acknowledgeMutation.isPending ? "Acknowledging..." : "Acknowledge"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">

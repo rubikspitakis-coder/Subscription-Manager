@@ -34,15 +34,33 @@ export function startReminderCron() {
           const reminderThreshold = subscription.reminderDays || 5;
           
           if (daysUntilRenewal <= reminderThreshold && daysUntilRenewal >= 0) {
-            console.log(`  📧 Sending reminder for ${subscription.name} (${daysUntilRenewal} days until renewal)`);
+            // Check if reminder needs to be sent
+            const shouldSendReminder = (
+              // Never sent before
+              !subscription.lastReminderSent ||
+              // Sent but not acknowledged, and it's been 5+ days
+              (!subscription.reminderAcknowledged && 
+               differenceInDays(new Date(), subscription.lastReminderSent) >= 5) ||
+              // Acknowledged, but renewal date passed the acknowledgment (reset for next cycle)
+              (subscription.reminderAcknowledged && 
+               subscription.renewalDate > subscription.reminderAcknowledged)
+            );
             
-            const result = await sendReminderEmail(REMINDER_EMAIL, subscription);
-            
-            if (result.success) {
-              emailsSent++;
+            if (shouldSendReminder) {
+              console.log(`  📧 Sending reminder for ${subscription.name} (${daysUntilRenewal} days until renewal)`);
+              
+              const result = await sendReminderEmail(REMINDER_EMAIL, subscription);
+              
+              if (result.success) {
+                // Update last reminder sent timestamp
+                await storage.updateLastReminderSent(subscription.id);
+                emailsSent++;
+              } else {
+                console.error(`  ❌ Failed to send reminder for ${subscription.name}: ${result.error}`);
+                errors++;
+              }
             } else {
-              console.error(`  ❌ Failed to send reminder for ${subscription.name}: ${result.error}`);
-              errors++;
+              console.log(`  ⏭️  Skipping ${subscription.name} - reminder already acknowledged or sent recently`);
             }
           }
         } catch (error: any) {

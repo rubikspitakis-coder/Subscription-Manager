@@ -14,7 +14,8 @@
     "import-data": "tsx server/import-data.ts",
     "migrate-columns": "tsx server/migrate-add-columns.ts",
     "update-websites": "tsx server/update-websites.ts",
-    "test-email": "tsx server/test-email.ts"
+    "test-email": "tsx server/test-email.ts",
+    "migrate-reminder-ack": "tsx server/migrate-reminder-ack.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

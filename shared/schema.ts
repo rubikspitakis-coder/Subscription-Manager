@@ -33,6 +33,8 @@ export const subscriptions = pgTable("subscriptions", {
   relatedProjects: text("related_projects"),
   officialWebsite: text("official_website"),
   recommendationScore: integer("recommendation_score"),
+  lastReminderSent: timestamp("last_reminder_sent"),
+  reminderAcknowledged: timestamp("reminder_acknowledged"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
