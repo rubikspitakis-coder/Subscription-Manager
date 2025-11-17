@@ -56,9 +56,12 @@ Your Excel file should have the following columns:
 
 ## Tips
 
+- **Missing Data is OK**: Only Tool Name and Subscription Expiry Date are required - all other fields are optional
+- **Empty Rows**: Completely empty rows are automatically skipped
 - **Date Format**: Use YYYY-MM-DD format (e.g., "2025-12-31") or Excel's date format
 - **Column Names**: Use exact column names as shown above for best results
 - **Notes Consolidation**: Pro's, Con's, Status, How I'm Using It, Related Projects, Official Website, and Recommendation Score are automatically combined into the notes field
+- **Default Values**: Missing cost defaults to 0, billing period to monthly, reminder days to 30
 - **Validation**: Each row is validated before import - invalid rows will be skipped with an error message
 - **Passwords**: If you include username/password columns, passwords are automatically encrypted
 - **Partial Imports**: If some rows fail validation, the valid rows will still be imported

@@ -246,54 +246,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 0; i < data.length; i++) {
         const row = data[i] as any;
         try {
+          // Skip completely empty rows
+          const hasAnyData = Object.values(row).some(val => val !== null && val !== undefined && val !== '');
+          if (!hasAnyData) {
+            continue;
+          }
+
           // Map Excel columns to subscription fields
           // Support both custom columns and standard columns
-          const subscriptionData = {
+          const subscriptionData: any = {
             name: row['Tool Name'] || row.name || row.Name,
-            cost: parseFloat(row['Subscription Cost'] || row.cost || row.Cost || 0),
-            billingPeriod: (row.billingPeriod || row.BillingPeriod || row.billing_period || 'monthly').toLowerCase(),
             renewalDate: row['Subscription Expiry Date'] || row.renewalDate || row.RenewalDate || row.renewal_date,
-            username: row.username || row.Username,
-            password: row.password || row.Password,
-            category: row.Type || row.category || row.Category,
-            notes: [
-              row.Notes,
-              row["Pro's"] ? `Pros: ${row["Pro's"]}` : null,
-              row["Con's"] ? `Cons: ${row["Con's"]}` : null,
-              row["How I'm Using It"] ? `Usage: ${row["How I'm Using It"]}` : null,
-              row['Related Projects'] ? `Projects: ${row['Related Projects']}` : null,
-            ].filter(Boolean).join('\n\n') || row.notes || row.Notes,
-            paymentMethod: row.paymentMethod || row.PaymentMethod || row.payment_method,
-            reminderDays: parseInt(row.reminderDays || row.ReminderDays || row.reminder_days || 30),
           };
 
-          // Validate required fields
-          if (!subscriptionData.name) {
+          // Validate required fields first
+          if (!subscriptionData.name || subscriptionData.name.toString().trim() === '') {
             results.failed++;
-            results.errors.push(`Row ${i + 2}: Missing required field 'name'`);
+            results.errors.push(`Row ${i + 2}: Missing required field 'Tool Name'`);
             continue;
           }
 
           if (!subscriptionData.renewalDate) {
             results.failed++;
-            results.errors.push(`Row ${i + 2}: Missing required field 'renewalDate'`);
+            results.errors.push(`Row ${i + 2}: Missing required field 'Subscription Expiry Date'`);
             continue;
           }
 
           // Parse the date if it's a string or Excel serial number
-          if (typeof subscriptionData.renewalDate === 'number') {
-            // Excel date serial number
-            const date = XLSX.SSF.parse_date_code(subscriptionData.renewalDate);
-            subscriptionData.renewalDate = new Date(date.y, date.m - 1, date.d);
-          } else if (typeof subscriptionData.renewalDate === 'string') {
-            subscriptionData.renewalDate = new Date(subscriptionData.renewalDate);
+          try {
+            if (typeof subscriptionData.renewalDate === 'number') {
+              // Excel date serial number
+              const date = XLSX.SSF.parse_date_code(subscriptionData.renewalDate);
+              subscriptionData.renewalDate = new Date(date.y, date.m - 1, date.d);
+            } else if (typeof subscriptionData.renewalDate === 'string') {
+              subscriptionData.renewalDate = new Date(subscriptionData.renewalDate);
+            }
+
+            // Check if date is valid
+            if (isNaN(subscriptionData.renewalDate.getTime())) {
+              results.failed++;
+              results.errors.push(`Row ${i + 2}: Invalid date format in 'Subscription Expiry Date'`);
+              continue;
+            }
+          } catch (dateError: any) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: Invalid date format - ${dateError.message}`);
+            continue;
           }
 
-          // Validate the subscription data
+          // Add optional fields only if they have values
+          const costValue = row['Subscription Cost'] || row.cost || row.Cost;
+          if (costValue !== null && costValue !== undefined && costValue !== '') {
+            subscriptionData.cost = parseFloat(costValue);
+            if (isNaN(subscriptionData.cost)) {
+              subscriptionData.cost = 0;
+            }
+          } else {
+            subscriptionData.cost = 0;
+          }
+
+          const billingPeriodValue = row.billingPeriod || row.BillingPeriod || row.billing_period || 'monthly';
+          subscriptionData.billingPeriod = billingPeriodValue.toString().toLowerCase();
+          if (!['monthly', 'yearly'].includes(subscriptionData.billingPeriod)) {
+            subscriptionData.billingPeriod = 'monthly';
+          }
+
+          // Optional fields
+          if (row.username || row.Username) {
+            subscriptionData.username = row.username || row.Username;
+          }
+          if (row.password || row.Password) {
+            subscriptionData.password = row.password || row.Password;
+          }
+          if (row.Type || row.category || row.Category) {
+            subscriptionData.category = row.Type || row.category || row.Category;
+          }
+          if (row.paymentMethod || row.PaymentMethod || row.payment_method) {
+            subscriptionData.paymentMethod = row.paymentMethod || row.PaymentMethod || row.payment_method;
+          }
+
+          // Build notes from multiple fields
+          const notesArray = [
+            row.Notes,
+            row["Pro's"] ? `Pros: ${row["Pro's"]}` : null,
+            row["Con's"] ? `Cons: ${row["Con's"]}` : null,
+            row["How I'm Using It"] ? `Usage: ${row["How I'm Using It"]}` : null,
+            row['Related Projects'] ? `Projects: ${row['Related Projects']}` : null,
+            row['Official Website'] ? `Website: ${row['Official Website']}` : null,
+            row['Recommendation Score'] ? `Score: ${row['Recommendation Score']}` : null,
+            row['Status'] ? `Status: ${row['Status']}` : null,
+          ].filter(val => val !== null && val !== undefined && val !== '');
+
+          if (notesArray.length > 0) {
+            subscriptionData.notes = notesArray.join('\n\n');
+          }
+
+          const reminderDaysValue = row.reminderDays || row.ReminderDays || row.reminder_days || 30;
+          subscriptionData.reminderDays = parseInt(reminderDaysValue.toString());
+          if (isNaN(subscriptionData.reminderDays) || subscriptionData.reminderDays < 1) {
+            subscriptionData.reminderDays = 30;
+          }
+
+          // Validate the subscription data with schema
           const result = insertSubscriptionSchema.safeParse(subscriptionData);
           if (!result.success) {
             results.failed++;
-            results.errors.push(`Row ${i + 2}: ${result.error.errors.map(e => e.message).join(', ')}`);
+            const errorMessages = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+            results.errors.push(`Row ${i + 2}: ${errorMessages}`);
             continue;
           }
 
