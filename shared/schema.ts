@@ -26,6 +26,13 @@ export const subscriptions = pgTable("subscriptions", {
   notes: text("notes"),
   lastLogin: timestamp("last_login"),
   paymentMethod: text("payment_method"),
+  // New fields from Excel
+  pros: text("pros"),
+  cons: text("cons"),
+  usageDescription: text("usage_description"),
+  relatedProjects: text("related_projects"),
+  officialWebsite: text("official_website"),
+  recommendationScore: integer("recommendation_score"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
