@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Eye } from "lucide-react";
+import { Mail, Eye, ExternalLink } from "lucide-react";
 
 interface Subscription {
   id: number;
@@ -25,6 +25,7 @@ interface Subscription {
   notes?: string;
   lastLogin?: Date;
   paymentMethod?: string;
+  officialWebsite?: string;
 }
 
 interface SubscriptionsTableProps {
@@ -89,7 +90,21 @@ export function SubscriptionsTable({
               return (
                 <TableRow key={sub.id} data-testid={`row-subscription-${sub.id}`}>
                   <TableCell className="font-medium" data-testid={`text-name-${sub.id}`}>
-                    {sub.name}
+                    <div className="flex items-center gap-2">
+                      <span>{sub.name}</span>
+                      {sub.officialWebsite && (
+                        <a
+                          href={sub.officialWebsite}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          data-testid={`link-website-${sub.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell data-testid={`text-category-${sub.id}`}>
                     {sub.category || "-"}

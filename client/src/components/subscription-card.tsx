@@ -13,6 +13,7 @@ import {
   DollarSign,
   Bell,
   Edit,
+  ExternalLink,
 } from "lucide-react";
 import { CredentialField } from "./credential-field";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -27,6 +28,7 @@ interface Subscription {
   password?: string;
   reminderDays?: number;
   status: "active" | "warning" | "urgent" | "critical";
+  officialWebsite?: string;
 }
 
 interface SubscriptionCardProps {
@@ -79,9 +81,23 @@ export function SubscriptionCard({ subscription, onUpdateReminderDays, onEdit }:
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-base" data-testid={`text-subscription-name-${subscription.id}`}>
-              {subscription.name}
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base" data-testid={`text-subscription-name-${subscription.id}`}>
+                {subscription.name}
+              </CardTitle>
+              {subscription.officialWebsite && (
+                <a
+                  href={subscription.officialWebsite}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                  data-testid={`link-website-${subscription.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
             <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
