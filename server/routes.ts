@@ -283,9 +283,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Map Excel columns to subscription fields
           // Support both custom columns and standard columns
+          // Log the row for debugging
+          if (i === 0) {
+            console.log('Sample row data:', JSON.stringify(row, null, 2));
+          }
+
           const subscriptionData: any = {
-            name: row['Tool Name'] || row.name || row.Name,
-            renewalDate: row['Subscription Expiry Date'] || row.renewalDate || row.RenewalDate || row.renewal_date,
+            name: row['Tool Name'] || row.name || row.Name || row['Tool_Name'] || row.ToolName,
+            renewalDate: row['Subscription Expiry Date'] || row['Subscription_Expiry_Date'] || row.SubscriptionExpiryDate || row.renewalDate || row.RenewalDate || row.renewal_date || row['Expiry Date'] || row.ExpiryDate,
           };
 
           // Validate required fields first
