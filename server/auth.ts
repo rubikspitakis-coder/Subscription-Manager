@@ -11,6 +11,11 @@ import bcrypt from "bcryptjs";
 const PgSession = connectPg(session);
 
 export function setupAuth(app: Express) {
+  // Trust Railway's proxy
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "subtrack-dev-secret-change-in-production",
     resave: false,
@@ -19,6 +24,7 @@ export function setupAuth(app: Express) {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
     store: new PgSession({
       pool: pool as any,
