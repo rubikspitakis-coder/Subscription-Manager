@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { updateReminderDaysSchema, insertSubscriptionSchema, loginSchema } from "@shared/schema";
+import { updateReminderDaysSchema, insertSubscriptionSchema, loginSchema, users } from "@shared/schema";
+import bcrypt from "bcryptjs";
 import { requireAuth } from "./auth";
 import passport from "passport";
 
@@ -41,6 +42,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ id: user.id, username: user.username });
     } else {
       res.status(401).json({ error: "Not authenticated" });
+    }
+  });
+
+  app.post("/api/auth/change-password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const user = req.user as any;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Current and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+
+      // Get user from database
+      const [dbUser] = await storage.db
+        .select()
+        .from(users)
+        .where(storage.eq(users.id, user.id))
+        .limit(1);
+
+      if (!dbUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, dbUser.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await storage.db
+        .update(users)
+        .set({ password: hashedPassword })
+        .where(storage.eq(users.id, user.id));
+
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ 
+        error: "Failed to change password",
+        message: error.message 
+      });
     }
   });
 

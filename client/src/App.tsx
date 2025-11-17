@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Dashboard from "@/pages/dashboard";
+import Settings from "@/pages/settings";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
@@ -19,7 +20,7 @@ function Router() {
       <Route path="/subscriptions" component={Dashboard} />
       <Route path="/calendar" component={Dashboard} />
       <Route path="/reminders" component={Dashboard} />
-      <Route path="/settings" component={Dashboard} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,6 +1,9 @@
 import { subscriptions, type Subscription, type InsertSubscription } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+
+// Export for use in routes
+export { db, eq };
 import { differenceInDays } from "date-fns";
 import { encryptPassword, decryptPassword } from "./crypto";
 
