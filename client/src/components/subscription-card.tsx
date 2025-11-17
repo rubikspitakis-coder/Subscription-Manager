@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { format, differenceInDays } from "date-fns";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,9 +66,31 @@ export function SubscriptionCard({ subscription, onUpdateReminderDays, onEdit }:
   const [reminderDays, setReminderDays] = useState(subscription.reminderDays?.toString() || "30");
   const daysUntilRenewal = differenceInDays(subscription.renewalDate, new Date());
   const hasCredentials = subscription.username || subscription.password;
+  const { toast } = useToast();
+
+  const sendReminderMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/subscriptions/${subscription.id}/send-reminder`, {
+        email: "tim@timhuggins.com.au" // Your email address
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email sent!",
+        description: `Reminder email sent to tim@timhuggins.com.au`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send email",
+        description: error.message || "Could not send reminder email",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSendReminder = () => {
-    console.log(`Sending reminder for ${subscription.name}`);
+    sendReminderMutation.mutate();
   };
 
   const handleReminderDaysChange = (value: string) => {
@@ -153,10 +178,11 @@ export function SubscriptionCard({ subscription, onUpdateReminderDays, onEdit }:
               size="sm"
               variant="outline"
               onClick={handleSendReminder}
+              disabled={sendReminderMutation.isPending}
               data-testid={`button-send-reminder-${subscription.id}`}
             >
               <Mail className="h-3 w-3 mr-2" />
-              Send Now
+              {sendReminderMutation.isPending ? "Sending..." : "Send Now"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
