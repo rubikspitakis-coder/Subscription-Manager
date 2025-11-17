@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, db, eq } from "./storage";
 import { updateReminderDaysSchema, insertSubscriptionSchema, loginSchema, users } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { requireAuth } from "./auth";
@@ -59,10 +59,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get user from database
-      const [dbUser] = await storage.db
+      const [dbUser] = await db
         .select()
         .from(users)
-        .where(storage.eq(users.id, user.id))
+        .where(eq(users.id, user.id))
         .limit(1);
 
       if (!dbUser) {
@@ -79,10 +79,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await storage.db
+      await db
         .update(users)
         .set({ password: hashedPassword })
-        .where(storage.eq(users.id, user.id));
+        .where(eq(users.id, user.id));
 
       res.json({ success: true, message: "Password updated successfully" });
     } catch (error: any) {
