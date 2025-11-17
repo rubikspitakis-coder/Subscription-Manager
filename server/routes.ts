@@ -257,6 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         console.log('Parsed', data.length, 'rows from Excel');
         console.log('First row columns:', Object.keys(data[0]));
+        console.log('First row sample:', JSON.stringify(data[0]).substring(0, 500));
       } catch (parseError: any) {
         console.error('Error parsing Excel file:', parseError);
         return res.status(400).json({ 
