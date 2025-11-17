@@ -44,6 +44,12 @@ export function AddSubscriptionDialog({
     notes: "",
     paymentMethod: "",
     reminderDays: "30",
+    pros: "",
+    cons: "",
+    usageDescription: "",
+    relatedProjects: "",
+    officialWebsite: "",
+    recommendationScore: "",
   });
 
   const createMutation = useMutation({
@@ -80,6 +86,12 @@ export function AddSubscriptionDialog({
       notes: "",
       paymentMethod: "",
       reminderDays: "30",
+      pros: "",
+      cons: "",
+      usageDescription: "",
+      relatedProjects: "",
+      officialWebsite: "",
+      recommendationScore: "",
     });
   };
 
@@ -108,6 +120,12 @@ export function AddSubscriptionDialog({
       notes: formData.notes || undefined,
       paymentMethod: formData.paymentMethod || undefined,
       reminderDays: parseInt(formData.reminderDays),
+      pros: formData.pros || undefined,
+      cons: formData.cons || undefined,
+      usageDescription: formData.usageDescription || undefined,
+      relatedProjects: formData.relatedProjects || undefined,
+      officialWebsite: formData.officialWebsite || undefined,
+      recommendationScore: formData.recommendationScore ? parseInt(formData.recommendationScore) : undefined,
     };
 
     createMutation.mutate(submissionData);
@@ -247,6 +265,73 @@ export function AddSubscriptionDialog({
                 value={formData.password}
                 onChange={(value) => handleChange("password", value)}
                 placeholder="Enter password (optional)"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="officialWebsite">Official Website</Label>
+              <Input
+                id="officialWebsite"
+                type="url"
+                placeholder="https://example.com"
+                value={formData.officialWebsite}
+                onChange={(e) => handleChange("officialWebsite", e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="pros">Pro's (Advantages)</Label>
+              <Textarea
+                id="pros"
+                placeholder="What are the advantages of this tool?"
+                value={formData.pros}
+                onChange={(e) => handleChange("pros", e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="cons">Con's (Disadvantages)</Label>
+              <Textarea
+                id="cons"
+                placeholder="What are the limitations or downsides?"
+                value={formData.cons}
+                onChange={(e) => handleChange("cons", e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="usageDescription">How I'm Using It</Label>
+              <Textarea
+                id="usageDescription"
+                placeholder="Describe how you're using this tool..."
+                value={formData.usageDescription}
+                onChange={(e) => handleChange("usageDescription", e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="relatedProjects">Related Projects</Label>
+              <Input
+                id="relatedProjects"
+                placeholder="Projects where you use this tool"
+                value={formData.relatedProjects}
+                onChange={(e) => handleChange("relatedProjects", e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="recommendationScore">Recommendation Score (1-10)</Label>
+              <Input
+                id="recommendationScore"
+                type="number"
+                min="1"
+                max="10"
+                placeholder="Rate this tool"
+                value={formData.recommendationScore}
+                onChange={(e) => handleChange("recommendationScore", e.target.value)}
               />
             </div>
 
