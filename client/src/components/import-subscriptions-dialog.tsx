@@ -67,10 +67,16 @@ export function ImportSubscriptionsDialog() {
       }
     },
     onError: (error: Error) => {
+      console.error("Import error:", error);
       toast({
         title: "Import failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred during import",
         variant: "destructive",
+      });
+      setImportResult({
+        success: 0,
+        failed: 0,
+        errors: [error.message || "Unknown error occurred"],
       });
     },
   });

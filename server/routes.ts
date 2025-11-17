@@ -230,11 +230,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      console.log('Processing import file:', req.file.originalname, 'Size:', req.file.size);
+
       // Parse the Excel file
-      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      let workbook, data;
+      try {
+        workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          return res.status(400).json({ 
+            error: "Invalid Excel file",
+            message: "The file does not contain any worksheets" 
+          });
+        }
+
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        data = XLSX.utils.sheet_to_json(worksheet);
+
+        if (!data || data.length === 0) {
+          return res.status(400).json({ 
+            error: "Empty file",
+            message: "The Excel file does not contain any data rows" 
+          });
+        }
+
+        console.log('Parsed', data.length, 'rows from Excel');
+        console.log('First row columns:', Object.keys(data[0]));
+      } catch (parseError: any) {
+        console.error('Error parsing Excel file:', parseError);
+        return res.status(400).json({ 
+          error: "Failed to parse Excel file",
+          message: "The file may be corrupted or not a valid Excel file. " + parseError.message
+        });
+      }
 
       const results = {
         success: 0,
@@ -353,24 +382,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             results.failed++;
             const errorMessages = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
             results.errors.push(`Row ${i + 2}: ${errorMessages}`);
+            console.log(`Row ${i + 2} validation failed:`, errorMessages);
             continue;
           }
 
           // Create the subscription
           await storage.createSubscription(result.data);
           results.success++;
+          console.log(`Row ${i + 2}: Successfully imported '${subscriptionData.name}'`);
         } catch (error: any) {
           results.failed++;
           results.errors.push(`Row ${i + 2}: ${error.message}`);
         }
       }
 
+      console.log('Import completed:', results.success, 'successful,', results.failed, 'failed');
       res.json(results);
     } catch (error: any) {
       console.error("Error importing subscriptions:", error);
+      console.error("Error stack:", error.stack);
       res.status(500).json({ 
         error: "Failed to import subscriptions",
-        message: error.message 
+        message: error.message,
+        details: error.stack 
       });
     }
   });
