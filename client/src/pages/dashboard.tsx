@@ -6,6 +6,7 @@ import { SubscriptionCard } from "@/components/subscription-card";
 import { SubscriptionsTable } from "@/components/subscriptions-table";
 import { AddSubscriptionDialog } from "@/components/add-subscription-dialog";
 import { EditSubscriptionDialog } from "@/components/edit-subscription-dialog";
+import { ImportSubscriptionsDialog } from "@/components/import-subscriptions-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -141,13 +142,16 @@ export default function Dashboard() {
             Manage your AI tool subscriptions
           </p>
         </div>
-        <Button
-          data-testid="button-add-subscription"
-          onClick={() => setAddDialogOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Subscription
-        </Button>
+        <div className="flex gap-2">
+          <ImportSubscriptionsDialog />
+          <Button
+            data-testid="button-add-subscription"
+            onClick={() => setAddDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Subscription
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto px-6 py-6">

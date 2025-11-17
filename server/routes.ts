@@ -5,6 +5,11 @@ import { updateReminderDaysSchema, insertSubscriptionSchema, loginSchema, users 
 import bcrypt from "bcryptjs";
 import { requireAuth } from "./auth";
 import passport from "passport";
+import multer from "multer";
+import * as XLSX from "xlsx";
+
+// Configure multer for memory storage
+const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
@@ -214,6 +219,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error sending reminder:", error);
       res.status(500).json({ 
         error: "Failed to send reminder",
+        message: error.message 
+      });
+    }
+  });
+
+  app.post("/api/subscriptions/import", requireAuth, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Parse the Excel file
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[],
+      };
+
+      // Process each row
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i] as any;
+        try {
+          // Map Excel columns to subscription fields
+          // Support both custom columns and standard columns
+          const subscriptionData = {
+            name: row['Tool Name'] || row.name || row.Name,
+            cost: parseFloat(row['Subscription Cost'] || row.cost || row.Cost || 0),
+            billingPeriod: (row.billingPeriod || row.BillingPeriod || row.billing_period || 'monthly').toLowerCase(),
+            renewalDate: row['Subscription Expiry Date'] || row.renewalDate || row.RenewalDate || row.renewal_date,
+            username: row.username || row.Username,
+            password: row.password || row.Password,
+            category: row.Type || row.category || row.Category,
+            notes: [
+              row.Notes,
+              row["Pro's"] ? `Pros: ${row["Pro's"]}` : null,
+              row["Con's"] ? `Cons: ${row["Con's"]}` : null,
+              row["How I'm Using It"] ? `Usage: ${row["How I'm Using It"]}` : null,
+              row['Related Projects'] ? `Projects: ${row['Related Projects']}` : null,
+            ].filter(Boolean).join('\n\n') || row.notes || row.Notes,
+            paymentMethod: row.paymentMethod || row.PaymentMethod || row.payment_method,
+            reminderDays: parseInt(row.reminderDays || row.ReminderDays || row.reminder_days || 30),
+          };
+
+          // Validate required fields
+          if (!subscriptionData.name) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: Missing required field 'name'`);
+            continue;
+          }
+
+          if (!subscriptionData.renewalDate) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: Missing required field 'renewalDate'`);
+            continue;
+          }
+
+          // Parse the date if it's a string or Excel serial number
+          if (typeof subscriptionData.renewalDate === 'number') {
+            // Excel date serial number
+            const date = XLSX.SSF.parse_date_code(subscriptionData.renewalDate);
+            subscriptionData.renewalDate = new Date(date.y, date.m - 1, date.d);
+          } else if (typeof subscriptionData.renewalDate === 'string') {
+            subscriptionData.renewalDate = new Date(subscriptionData.renewalDate);
+          }
+
+          // Validate the subscription data
+          const result = insertSubscriptionSchema.safeParse(subscriptionData);
+          if (!result.success) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: ${result.error.errors.map(e => e.message).join(', ')}`);
+            continue;
+          }
+
+          // Create the subscription
+          await storage.createSubscription(result.data);
+          results.success++;
+        } catch (error: any) {
+          results.failed++;
+          results.errors.push(`Row ${i + 2}: ${error.message}`);
+        }
+      }
+
+      res.json(results);
+    } catch (error: any) {
+      console.error("Error importing subscriptions:", error);
+      res.status(500).json({ 
+        error: "Failed to import subscriptions",
         message: error.message 
       });
     }
