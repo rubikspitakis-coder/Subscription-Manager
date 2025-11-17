@@ -7,6 +7,7 @@ import { requireAuth } from "./auth";
 import passport from "passport";
 import multer from "multer";
 import * as XLSX from "xlsx";
+import { sendReminderEmail, isEmailConfigured } from "./email";
 
 // Configure multer for memory storage
 const upload = multer({ storage: multer.memoryStorage() });
@@ -212,9 +213,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/subscriptions/:id/send-reminder", requireAuth, async (req, res) => {
     try {
-      const { id } = req.params;
-      console.log(`Sending reminder for subscription ${id}`);
-      res.json({ success: true, message: "Reminder sent" });
+      const id = parseInt(req.params.id);
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email address is required" });
+      }
+
+      // Check if email is configured
+      if (!isEmailConfigured()) {
+        return res.status(503).json({ 
+          error: "Email service not configured",
+          message: "Please set RESEND_API_KEY environment variable to enable email reminders."
+        });
+      }
+
+      // Get subscription details
+      const subscription = await storage.getSubscription(id);
+      if (!subscription) {
+        return res.status(404).json({ error: "Subscription not found" });
+      }
+
+      // Send the email
+      const result = await sendReminderEmail(email, subscription);
+
+      if (!result.success) {
+        return res.status(500).json({ 
+          error: "Failed to send email",
+          message: result.error 
+        });
+      }
+
+      res.json({ success: true, message: "Reminder email sent successfully" });
     } catch (error: any) {
       console.error("Error sending reminder:", error);
       res.status(500).json({ 

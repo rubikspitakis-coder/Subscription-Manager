@@ -13,7 +13,8 @@
     "update-password": "tsx server/update-password.ts",
     "import-data": "tsx server/import-data.ts",
     "migrate-columns": "tsx server/migrate-add-columns.ts",
-    "update-websites": "tsx server/update-websites.ts"
+    "update-websites": "tsx server/update-websites.ts",
+    "test-email": "tsx server/test-email.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -79,6 +80,7 @@
     "react-icons": "^5.4.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
+    "resend": "^6.4.2",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.2.5",
