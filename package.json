@@ -12,7 +12,8 @@
     "create-user": "tsx server/create-user.ts",
     "update-password": "tsx server/update-password.ts",
     "import-data": "tsx server/import-data.ts",
-    "migrate-columns": "tsx server/migrate-add-columns.ts"
+    "migrate-columns": "tsx server/migrate-add-columns.ts",
+    "update-websites": "tsx server/update-websites.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
