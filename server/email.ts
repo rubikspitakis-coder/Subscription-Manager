@@ -1,8 +1,10 @@
-import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 import { format } from 'date-fns';
 
-// Initialize Resend with API key from environment
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Initialize SendGrid with API key from environment
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 interface Subscription {
   id: number;
@@ -18,11 +20,11 @@ export async function sendReminderEmail(
   subscription: Subscription
 ): Promise<{ success: boolean; error?: string }> {
   // Check if email is configured
-  if (!resend) {
-    console.warn('Email not configured - RESEND_API_KEY not set');
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('Email not configured - SENDGRID_API_KEY not set');
     return { 
       success: false, 
-      error: 'Email service not configured. Please add RESEND_API_KEY to environment variables.' 
+      error: 'Email service not configured. Please add SENDGRID_API_KEY to environment variables.' 
     };
   }
 
@@ -35,9 +37,12 @@ export async function sendReminderEmail(
       ? `<p><a href="${subscription.officialWebsite}" style="color: #0066cc;">Visit ${subscription.name} website →</a></p>`
       : '';
 
-    const { data, error } = await resend.emails.send({
-      from: 'Subscription Tracker <onboarding@resend.dev>', // You'll need to verify your domain for production
-      to: [toEmail],
+    // Use environment variable for from email or fallback to verified sender
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'tim@timhuggins.com.au';
+    
+    const msg = {
+      to: toEmail,
+      from: fromEmail,
       subject: `⏰ Reminder: ${subscription.name} renewal in ${daysUntilRenewal} days`,
       html: `
         <!DOCTYPE html>
@@ -72,21 +77,26 @@ export async function sendReminderEmail(
           </body>
         </html>
       `,
-    });
+    };
 
-    if (error) {
-      console.error('Resend API error:', error);
-      return { success: false, error: error.message };
-    }
-
-    console.log('Email sent successfully:', data);
+    const result = await sgMail.send(msg);
+    console.log('Email sent successfully via SendGrid');
+    console.log('Response:', result[0].statusCode);
     return { success: true };
   } catch (error: any) {
     console.error('Error sending email:', error);
+    
+    // Extract more detailed error info from SendGrid
+    if (error.response) {
+      console.error('SendGrid error body:', JSON.stringify(error.response.body, null, 2));
+      const errorMsg = error.response.body?.errors?.[0]?.message || error.message;
+      return { success: false, error: errorMsg };
+    }
+    
     return { success: false, error: error.message };
   }
 }
 
 export function isEmailConfigured(): boolean {
-  return !!process.env.RESEND_API_KEY;
+  return !!process.env.SENDGRID_API_KEY;
 }

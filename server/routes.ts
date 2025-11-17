@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isEmailConfigured()) {
         return res.status(503).json({ 
           error: "Email service not configured",
-          message: "Please set RESEND_API_KEY environment variable to enable email reminders."
+          message: "Please set SENDGRID_API_KEY environment variable to enable email reminders."
         });
       }
 
