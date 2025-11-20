@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-subscription-manager-v1';
+const CACHE_NAME = 'ai-subscription-manager-v2';
 const urlsToCache = [
   '/',
   '/manifest.json'
