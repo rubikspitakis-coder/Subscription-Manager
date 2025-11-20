@@ -76,7 +76,20 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static files with proper headers
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      // Set proper content type for service worker
+      if (filePath.endsWith('sw.js')) {
+        res.set('Content-Type', 'application/javascript');
+        res.set('Service-Worker-Allowed', '/');
+      }
+      // Set proper content type for manifest
+      if (filePath.endsWith('manifest.json')) {
+        res.set('Content-Type', 'application/manifest+json');
+      }
+    }
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
