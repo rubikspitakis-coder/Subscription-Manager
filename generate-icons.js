@@ -22,7 +22,7 @@ async function generateIcons() {
     const svg = Buffer.from(createSVG(size));
     await sharp(svg)
       .png()
-      .toFile(`public/icon-${size}.png`);
+      .toFile(`client/public/icon-${size}.png`);
     console.log(`✓ Generated icon-${size}.png`);
   }
 }
